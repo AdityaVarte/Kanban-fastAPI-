@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kanban - Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f5fa;
+    --card-bg: #ffffff;
+    --text: #1e1e2d;
+    --text-muted: #8a8fa3;
+    --border: #ececf3;
+    --accent: #6c5dd3;
+    --accent-hover: #5b4dc4;
+    --danger: #ef4444;
+    --shadow: 0 4px 20px rgba(20, 20, 40, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: var(--card-bg);
+    padding: 36px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 380px;
+  }
+  .logo {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  h2 { margin: 0 0 6px 0; font-size: 22px; font-weight: 700; }
+  p.subtitle { color: var(--text-muted); margin: 0 0 24px 0; font-size: 14px; }
+  input {
+    width: 100%;
+    padding: 11px 14px;
+    margin: 6px 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #fafafe;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    width: 100%;
+    padding: 11px;
+    margin-top: 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: var(--accent-hover); }
+  #message { margin-top: 14px; font-size: 13px; text-align: center; }
+  .toggle { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-muted); }
+  .toggle a { color: var(--accent); text-decoration: none; cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"></div>
+    <h2 id="formTitle">Welcome back</h2>
+    <p class="subtitle" id="formSubtitle">Log in to your Kanban boards</p>
+
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button id="submitBtn" onclick="login()">Login</button>
+
+    <div class="toggle">
+      <span id="toggleText">Don't have an account? <a onclick="toggleMode()">Register</a></span>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+<script>
+  let isRegisterMode = false;
+
+  function toggleMode() {
+    isRegisterMode = !isRegisterMode;
+    document.getElementById('formTitle').innerText = isRegisterMode ? 'Create account' : 'Welcome back';
+    document.getElementById('formSubtitle').innerText = isRegisterMode ? 'Sign up to start using Kanban' : 'Log in to your Kanban boards';
+    document.getElementById('submitBtn').innerText = isRegisterMode ? 'Register' : 'Login';
+    document.getElementById('submitBtn').onclick = isRegisterMode ? register : login;
+    document.getElementById('toggleText').innerHTML = isRegisterMode
+      ? `Already have an account? <a onclick="toggleMode()">Login</a>`
+      : `Don't have an account? <a onclick="toggleMode()">Register</a>`;
+    document.getElementById('message').innerText = '';
+  }
+
+  async function register() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (res.ok) {
+      document.getElementById('message').style.color = '#16a34a';
+      document.getElementById('message').innerText = 'Registered! You can now log in.';
+      toggleMode();
+    } else {
+      const err = await res.json();
+      document.getElementById('message').style.color = '#ef4444';
+      document.getElementById('message').innerText = err.detail || 'Registration failed';
+    }
+  }
+
+  async function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
+
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('token', data.access_token);
+      window.location.href = '/static/board.html';
+    } else {
+      const err = await res.json();
+      document.getElementById('message').style.color = '#ef4444';
+      document.getElementById('message').innerText = err.detail || 'Login failed';
+    }
+  }
+</script>
+</body>
+</html>

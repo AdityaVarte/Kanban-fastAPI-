@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kanban Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f5fa;
+    --sidebar-bg: #ffffff;
+    --topbar-bg: #ffffff;
+    --card-bg: #ffffff;
+    --column-bg: #f8f9fc;
+    --text: #1e1e2d;
+    --text-muted: #8a8fa3;
+    --border: #ececf3;
+    --accent: #6c5dd3;
+    --accent-hover: #5b4dc4;
+    --danger: #ef4444;
+    --danger-bg: #fee2e2;
+    --shadow: 0 2px 8px rgba(20, 20, 40, 0.06);
+  }
+
+  [data-theme="dark"] {
+    --bg: #14141f;
+    --sidebar-bg: #1b1b2a;
+    --topbar-bg: #1b1b2a;
+    --card-bg: #22222f;
+    --column-bg: #1b1b2a;
+    --text: #f1f1f6;
+    --text-muted: #8a8fa3;
+    --border: #2e2e40;
+    --accent: #8b7cf6;
+    --accent-hover: #7a6be0;
+    --danger: #f87171;
+    --danger-bg: #3a2230;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  /* --- Delete icon button (used for board/column/card) --- */
+  .icon-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { background: var(--danger-bg); color: var(--danger); }
+  .icon-btn svg { width: 13px; height: 13px; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 70px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 24px;
+  }
+  #sidebar .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; }
+  #sidebar .spacer { flex: 1; }
+  #sidebar button.nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 18px;
+  }
+  #sidebar button.nav-btn:hover { color: var(--accent); }
+
+  /* Main area */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  #topbar {
+    background: var(--topbar-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  #topbar h2 { margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; }
+  #searchInput {
+    flex: 1; max-width: 320px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--column-bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  #searchInput:focus { outline: none; border-color: var(--accent); }
+  .spacer-flex { flex: 1; }
+  #themeToggle {
+    background: var(--column-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  #logoutBtn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Boards row */
+  #boardsList { display: flex; gap: 10px; padding: 14px 24px 0 24px; flex-wrap: wrap; }
+  .boardChip {
+    padding: 6px 8px 6px 14px;
+    border-radius: 20px;
+    background: var(--column-bg);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .boardChip.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .boardChip.active .icon-btn { color: rgba(255,255,255,0.75); }
+  .boardChip.active .icon-btn:hover { background: rgba(255,255,255,0.2); color: white; }
+
+  #newBoardForm { display: flex; gap: 8px; padding: 14px 24px 0 24px; }
+  #newBoardForm input {
+    padding: 9px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--column-bg); color: var(--text); font-family: inherit; font-size: 14px;
+  }
+
+  /* Columns */
+  #columnsContainer {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    align-items: flex-start;
+  }
+  .column {
+    background: var(--column-bg);
+    border-radius: 12px;
+    padding: 14px;
+    width: 260px;
+    flex-shrink: 0;
+    min-height: 120px;
+    box-shadow: var(--shadow);
+  }
+  .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .column-header .title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .count-badge {
+    background: var(--bg); color: var(--text-muted);
+    border-radius: 10px; padding: 1px 8px; font-size: 12px; font-weight: 500;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    cursor: grab;
+    border: 1px solid var(--border);
+  }
+  .card:active { cursor: grabbing; }
+  .card .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+  .card strong { font-size: 13.5px; font-weight: 600; }
+  .card small { color: var(--text-muted); display: block; margin-top: 4px; font-size: 12px; }
+
+  .addLink { color: var(--text-muted); font-size: 13px; cursor: pointer; padding: 6px 0; font-weight: 500; }
+  .addLink:hover { color: var(--accent); }
+  .addCardForm { display: none; gap: 6px; margin-top: 6px; }
+  .addCardForm.open { display: flex; flex-direction: column; }
+  .addCardForm input {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card-bg); color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .addCardForm button {
+    background: var(--accent); color: white; border: none; border-radius: 6px;
+    padding: 6px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600;
+  }
+
+  .newColumnBox input {
+    width: 100%; padding: 9px; margin-bottom: 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card-bg); color: var(--text); font-family: inherit; font-size: 14px;
+  }
+  .newColumnBox button {
+    width: 100%; padding: 9px; border: none; border-radius: 6px;
+    background: var(--accent); color: white; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo"></div>
+  <button class="nav-btn" title="Boards">▤</button>
+  <button class="nav-btn" title="Stats">📊</button>
+  <div class="spacer"></div>
+  <button class="nav-btn" id="logoutIcon" onclick="logout()" title="Logout">⏻</button>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <h2>Kanban</h2>
+    <input type="text" id="searchInput" placeholder="Search cards..." oninput="filterCards()">
+    <div class="spacer-flex"></div>
+    <button id="themeToggle" onclick="toggleTheme()">🌙 Dark</button>
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+  </div>
+
+  <div id="newBoardForm">
+    <input type="text" id="newBoardName" placeholder="New board name">
+    <button class="btn-primary" onclick="createBoard()">+ New Board</button>
+  </div>
+
+  <div id="boardsList"></div>
+
+  <div id="columnsContainer"></div>
+</div>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/static/login.html';
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+
+  let currentBoardId = null;
+
+  const TRASH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
+
+  // ---------- Theme ----------
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeToggle').innerText = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    localStorage.setItem('theme', theme);
+  }
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(current);
+  }
+  applyTheme(localStorage.getItem('theme') || 'light');
+
+  // ---------- Auth ----------
+  function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/static/login.html';
+  }
+
+  async function apiFetch(url, options = {}) {
+    const res = await fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+    if (res.status === 401) {
+      logout();
+      return null;
+    }
+    return res;
+  }
+
+  // ---------- Boards ----------
+  async function loadBoards() {
+    const res = await apiFetch('/boards/');
+    if (!res) return;
+    const boards = await res.json();
+
+    const listDiv = document.getElementById('boardsList');
+    listDiv.innerHTML = '';
+    boards.forEach(board => {
+      const chip = document.createElement('div');
+      chip.className = 'boardChip' + (board.id === currentBoardId ? ' active' : '');
+      chip.innerHTML = `<span>${board.name}</span><button class="icon-btn" onclick="deleteBoard(event, ${board.id})">${TRASH_SVG}</button>`;
+      chip.addEventListener('click', () => selectBoard(board.id));
+      listDiv.appendChild(chip);
+    });
+
+    if (boards.length > 0 && currentBoardId === null) {
+      selectBoard(boards[0].id);
+    }
+    if (boards.length === 0) {
+      document.getElementById('columnsContainer').innerHTML = '';
+    }
+  }
+
+  async function createBoard() {
+    const name = document.getElementById('newBoardName').value.trim();
+    if (!name) return;
+
+    const res = await apiFetch('/boards/', {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+    if (!res) return;
+    document.getElementById('newBoardName').value = '';
+    await loadBoards();
+  }
+
+  async function deleteBoard(event, boardId) {
+    event.stopPropagation();
+    if (!confirm('Delete this board and everything in it?')) return;
+
+    const res = await apiFetch(`/boards/${boardId}`, { method: 'DELETE' });
+    if (!res) return;
+
+    if (currentBoardId === boardId) currentBoardId = null;
+    await loadBoards();
+  }
+
+  async function selectBoard(boardId) {
+    currentBoardId = boardId;
+    await loadBoards();
+    await loadBoardDetail(boardId);
+  }
+
+  // ---------- Columns & Cards ----------
+  async function loadBoardDetail(boardId) {
+    const res = await apiFetch(`/boards/${boardId}`);
+    if (!res) return;
+    const board = await res.json();
+
+    const container = document.getElementById('columnsContainer');
+    container.innerHTML = '';
+
+    board.columns.forEach(column => {
+      const colDiv = document.createElement('div');
+      colDiv.className = 'column';
+      colDiv.dataset.columnId = column.id;
+
+      colDiv.innerHTML = `
+        <div class="column-header">
+          <div class="title">${column.name} <span class="count-badge">${column.cards.length}</span></div>
+          <button class="icon-btn" onclick="deleteColumn(${column.id})">${TRASH_SVG}</button>
+        </div>
+      `;
+
+      colDiv.addEventListener('dragover', (e) => e.preventDefault());
+      colDiv.addEventListener('drop', (e) => onDrop(e, column.id));
+
+      column.cards.forEach(card => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        cardDiv.draggable = true;
+        cardDiv.dataset.cardId = card.id;
+        cardDiv.dataset.title = card.title.toLowerCase();
+        cardDiv.innerHTML = `
+          <div class="card-top">
+            <strong>${card.title}</strong>
+            <button class="icon-btn" onclick="deleteCard(event, ${card.id})">${TRASH_SVG}</button>
+          </div>
+          ${card.description ? `<small>${card.description}</small>` : ''}
+        `;
+        cardDiv.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('cardId', card.id);
+        });
+        colDiv.appendChild(cardDiv);
+      });
+
+      const addWrap = document.createElement('div');
+      addWrap.innerHTML = `
+        <div class="addLink" onclick="toggleAddForm(${column.id})">+ New</div>
+        <div class="addCardForm" id="addForm-${column.id}">
+          <input type="text" id="cardInput-${column.id}" placeholder="Card title">
+          <button onclick="createCard(${column.id})">Add</button>
+        </div>
+      `;
+      colDiv.appendChild(addWrap);
+
+      container.appendChild(colDiv);
+    });
+
+    const addColumnDiv = document.createElement('div');
+    addColumnDiv.className = 'column newColumnBox';
+    addColumnDiv.innerHTML = `
+      <input type="text" id="newColumnName" placeholder="Column name">
+      <button onclick="createColumn(${boardId})">+ Add Column</button>
+    `;
+    container.appendChild(addColumnDiv);
+  }
+
+  function toggleAddForm(columnId) {
+    const form = document.getElementById(`addForm-${columnId}`);
+    form.classList.toggle('open');
+  }
+
+  async function createColumn(boardId) {
+    const name = document.getElementById('newColumnName').value.trim();
+    if (!name) return;
+
+    const res = await apiFetch('/columns/', {
+      method: 'POST',
+      body: JSON.stringify({ name, position: 0, board_id: boardId })
+    });
+    if (!res) return;
+    await loadBoardDetail(boardId);
+  }
+
+  async function deleteColumn(columnId) {
+    if (!confirm('Delete this column and its cards?')) return;
+
+    const res = await apiFetch(`/columns/${columnId}`, { method: 'DELETE' });
+    if (!res) return;
+    await loadBoardDetail(currentBoardId);
+  }
+
+  async function createCard(columnId) {
+    const input = document.getElementById(`cardInput-${columnId}`);
+    const title = input.value.trim();
+    if (!title) return;
+
+    const res = await apiFetch('/cards/', {
+      method: 'POST',
+      body: JSON.stringify({ title, position: 0, column_id: columnId })
+    });
+    if (!res) return;
+    await loadBoardDetail(currentBoardId);
+  }
+
+  async function deleteCard(event, cardId) {
+    event.stopPropagation();
+    if (!confirm('Delete this card?')) return;
+
+    const res = await apiFetch(`/cards/${cardId}`, { method: 'DELETE' });
+    if (!res) return;
+    await loadBoardDetail(currentBoardId);
+  }
+
+  async function onDrop(e, targetColumnId) {
+    e.preventDefault();
+    const cardId = e.dataTransfer.getData('cardId');
+
+    const column = e.currentTarget;
+    const cardElements = [...column.querySelectorAll('.card')];
+    let position = cardElements.length;
+
+    for (let i = 0; i < cardElements.length; i++) {
+      const box = cardElements[i].getBoundingClientRect();
+      if (e.clientY < box.top + box.height / 2) {
+        position = i;
+        break;
+      }
+    }
+
+    const res = await apiFetch(`/cards/${cardId}/move`, {
+      method: 'PATCH',
+      body: JSON.stringify({ column_id: targetColumnId, position })
+    });
+    if (!res) return;
+    await loadBoardDetail(currentBoardId);
+  }
+
+  // ---------- Search ----------
+  function filterCards() {
+    const term = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.card').forEach(card => {
+      const match = card.dataset.title.includes(term);
+      card.style.display = match ? '' : 'none';
+    });
+  }
+
+  loadBoards();
+</script>
+</body>
+</html>
